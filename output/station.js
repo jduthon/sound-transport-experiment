@@ -1,4 +1,4 @@
-const getApp = () => document.getElementById("app");
+import { getApp } from '../page/utils'
 
 const createOrFind = (finderFn, insertFn) => (
   finderProps,
