@@ -16,7 +16,7 @@ export function setup() {
 }
 export function playStationUpdate(avgDelay = 0.2, stationId)  {
   const id = generateStationFreq(stationId)
-  triOsc.freq(proc.map(id, 0, 100, 30, 300));
+  triOsc.freq(proc.map(id, 0, 999, 30, 300));
 
   const setDecay = proc.map(avgDelay, -50, 100, 0, 3)
   const setReleaseTime = proc.map(avgDelay, -50, 100, 0, 3)
