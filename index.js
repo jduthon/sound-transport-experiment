@@ -8,12 +8,11 @@ import { makeIndirectFetch } from "./fn-helpers";
 import { map, switchMap } from "rxjs/operators";
 import { combineLatest, from } from "rxjs";
 import { upsertStation } from "./output/station";
-
+import { setup as initAudio, playEnv } from './output/initAudio'
 const stops = ["S+U Alexanderplatz", "U Moritzplatz", "U Weinmeisterstraße"];
-
 const pollDepartures = stationId =>
-  poll(2000, makeIndirectFetch(fetchDepartures)({ stationId }));
-
+  poll(5000, makeIndirectFetch(fetchDepartures)({ stationId }));
+initAudio();
 stops
   .map(stop =>
     from(fetchStopInfo(stop)).pipe(
@@ -33,16 +32,14 @@ stops
   .forEach(obs =>
     obs.subscribe(([station, { avgDelay, departures }]) => {
       console.log(station.name, departures);
+      playEnv(avgDelay, station.id);
       upsertStation({ station, avgDelay, departures });
     })
   );
-
 //pollDelays.subscribe(t => console.log(t));
-
 /*hafas.journeys('900000003201', '900000024101', {results: 1})
 .then((journeys) => console.log(journeys[0]))
 .catch(console.error)*/
-
 /*hafas
   .radar(
     {
@@ -55,7 +52,6 @@ stops
   )
   .then(radar => console.log(JSON.stringify(radar)))
   .catch(console.error);*/
-
 /*hafas
   .departures("900000100515", { duration: 100 })
   .then(departures => departures.map(({ delay }) => delay !== null && delay))
