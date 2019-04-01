@@ -8,7 +8,7 @@ import { makeIndirectFetch } from "./fn-helpers";
 import { map, switchMap } from "rxjs/operators";
 import { combineLatest, from } from "rxjs";
 import { upsertStation } from "./output/station";
-import { setup as initAudio, playEnv } from './output/initAudio'
+import { setup as initAudio, playStationUpdate } from './output/initAudio'
 const stops = ["S+U Alexanderplatz", "U Moritzplatz", "U Weinmeisterstraße"];
 const pollDepartures = stationId =>
   poll(5000, makeIndirectFetch(fetchDepartures)({ stationId }));
@@ -32,7 +32,7 @@ stops
   .forEach(obs =>
     obs.subscribe(([station, { avgDelay, departures }]) => {
       console.log(station.name, departures);
-      playEnv(avgDelay, station.id);
+      playStationUpdate(avgDelay, station.id);
       upsertStation({ station, avgDelay, departures });
     })
   );

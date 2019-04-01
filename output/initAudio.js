@@ -14,7 +14,7 @@ export function setup() {
   triOsc.amp(env);
   triOsc.start();
 }
-export function playEnv(avgDelay = 0.2, stationId)  {
+export function playStationUpdate(avgDelay = 0.2, stationId)  {
   const id = generateStationFreq(stationId)
   triOsc.freq(proc.map(id, 0, 100, 30, 300));
 
