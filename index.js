@@ -1,3 +1,4 @@
+import Tone from "tone"
 import { fetchObservable, poll } from "./rx";
 import {
   fetchDepartures,
@@ -8,6 +9,14 @@ import { makeIndirectFetch } from "./fn-helpers";
 import { map, switchMap } from "rxjs/operators";
 import { combineLatest, from } from "rxjs";
 import { upsertStation } from "./output/station";
+
+window.tone = Tone;
+//create a synth and connect it to the master output (your speakers)
+var synth = new Tone.PolySynth(3).toMaster();
+synth.triggerAttackRelease(["C4", "Eb4", "G4"], "4n");
+window.synth = synth;
+
+//play a middle 'C' for the duration of an 8th note
 
 const stops = ["S+U Alexanderplatz", "U Moritzplatz", "U Weinmeisterstraße"];
 
@@ -32,7 +41,6 @@ stops
   )
   .forEach(obs =>
     obs.subscribe(([station, { avgDelay, departures }]) => {
-      console.log(station.name, departures);
       upsertStation({ station, avgDelay, departures });
     })
   );
