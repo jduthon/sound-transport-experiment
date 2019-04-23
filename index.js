@@ -5,39 +5,77 @@ import {
   fetchStopInfo
 } from "./input/vbb";
 import { makeIndirectFetch } from "./fn-helpers";
-import { map, switchMap } from "rxjs/operators";
+import { delay, distinctUntilChanged, map, switchMap } from "rxjs/operators";
 import { combineLatest, from } from "rxjs";
 import { upsertStation } from "./output/station";
+import {
+  startOrUpdateKick,
+  startOrUpdateHiHat,
+  startOrUpdateCymbal,
+  playFromMajorScale
+} from "./output/sound";
 
-const stops = ["S+U Alexanderplatz", "U Moritzplatz", "U Weinmeisterstraße"];
+const stops = {
+  alexanderplatz: "S+U Alexanderplatz",
+  neukoln: "S neukoln",
+  wedding: "S wedding",
+  hauptbanhof: "Hauptbanhof",
+  schonefeld: "Schonefeld"
+};
 
 const pollDepartures = stationId =>
-  poll(2000, makeIndirectFetch(fetchDepartures)({ stationId }));
+  poll(7000, makeIndirectFetch(fetchDepartures)({ stationId }));
 
-stops
-  .map(stop =>
-    from(fetchStopInfo(stop)).pipe(
-      switchMap(stopInfo =>
-        combineLatest(
-          from([stopInfo]),
-          pollDepartures(stopInfo.id).pipe(
-            map(departures => ({
-              avgDelay: departuresToAvgDelay(departures),
-              departures
-            }))
-          )
+const createStopObs = stop =>
+  from(fetchStopInfo(stop)).pipe(
+    switchMap(stopInfo =>
+      combineLatest(
+        from([stopInfo]),
+        pollDepartures(stopInfo.id).pipe(
+          map(departures => ({
+            avgDelay: Math.round(departuresToAvgDelay(departures)),
+            departures
+          }))
         )
+      ).pipe(
+        map(([station, { avgDelay, departures }]) => ({
+          station,
+          avgDelay,
+          departures
+        }))
       )
     )
-  )
-  .forEach(obs =>
-    obs.subscribe(([station, { avgDelay, departures }]) => {
-      console.log(station.name, departures);
-      upsertStation({ station, avgDelay, departures });
-    })
   );
 
-//pollDelays.subscribe(t => console.log(t));
+const stopsInfo$ = Object.entries(stops).reduce(
+  (tmpStopsInfo$, [stopKey, stopName]) => ({
+    ...tmpStopsInfo$,
+    [stopKey]: createStopObs(stopName)
+  }),
+  {}
+);
+
+Object.values(stopsInfo$).forEach(obs => obs.subscribe(upsertStation));
+
+const compareStopValues = (a, b) =>
+  a.avgDelay === b.avgDelay || a.departures.length === b.departures.length;
+
+const onlyWhenChanged = stop$ =>
+  stop$.pipe(distinctUntilChanged(compareStopValues));
+
+onlyWhenChanged(stopsInfo$.neukoln).subscribe(startOrUpdateKick);
+
+onlyWhenChanged(stopsInfo$.wedding).subscribe(startOrUpdateHiHat);
+
+onlyWhenChanged(stopsInfo$.schonefeld).subscribe(startOrUpdateCymbal);
+
+Object.values(stopsInfo$)
+  .map(obs =>
+    obs.pipe(
+      switchMap(val => from([val]).pipe(delay(Math.ceil(Math.random() * 2000))))
+    )
+  )
+  .map(obs => obs.subscribe(playFromMajorScale));
 
 /*hafas.journeys('900000003201', '900000024101', {results: 1})
 .then((journeys) => console.log(journeys[0]))
